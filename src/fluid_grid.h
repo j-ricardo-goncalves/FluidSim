@@ -24,4 +24,5 @@ struct FluidGrid {
   
   FluidGrid(float dt, float viscosity, float diffusion);
   void step();
+  void apply_boundary_conditions(int b, std::vector<float>& field);
 };
