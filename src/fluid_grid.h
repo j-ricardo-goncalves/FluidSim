@@ -17,6 +17,8 @@ struct FluidGrid {
   std::vector<float> velx_previous;
   std::vector<float> vely;
   std::vector<float> vely_previous;
+  std::vector<float> pressure;
+  std::vector<float> divergence;
 
   float viscosity;
   float diffusion;
@@ -28,4 +30,5 @@ struct FluidGrid {
   void diffuse(int b, std::vector<float>& field, std::vector<float>& field_previous, float rate);
   void advect(int b, std::vector<float>& d, std::vector<float>& d0,
             std::vector<float>& velx, std::vector<float>& vely, float dt);
+  void project(std::vector<float>& velx, std::vector<float>& vely);
 };

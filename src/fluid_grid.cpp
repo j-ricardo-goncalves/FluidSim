@@ -8,6 +8,8 @@ FluidGrid::FluidGrid(float dt, float viscosity, float diffusion)
     velx_previous.assign(GRID, 0.0f);
     vely.assign(GRID, 0.0f);
     vely_previous.assign(GRID, 0.0f);
+    pressure.assign(GRID, 0.0f);
+    divergence.assign(GRID, 0.0f);
   }
   
 void FluidGrid::apply_boundary_conditions(int b, std::vector<float>& field) {
@@ -72,4 +74,43 @@ void FluidGrid::advect(int b, std::vector<float>& d, std::vector<float>& d0,
     }
 
     apply_boundary_conditions(b, d);
+}
+
+void FluidGrid::project(std::vector<float>& velx, std::vector<float>& vely) {
+  // 1. compute divergence, reset pressure guess to 0
+  for (int j = 1; j <= GRID_SIZE; j++) {
+    for (int i = 1; i <= GRID_SIZE; i++) {
+      divergence[idx(i, j)] = -0.5f * (
+        (velx[idx(i+1, j)] - velx[idx(i-1, j)]) +
+        (vely[idx(i, j+1)] - vely[idx(i, j-1)])
+      ) / GRID_SIZE;
+      pressure[idx(i, j)] = 0.0f;
+    }
+  }
+  apply_boundary_conditions(0, divergence);
+  apply_boundary_conditions(0, pressure);
+
+  // 2. Gauss-Seidel solve for pressure
+  for (int iter = 0; iter < 20; iter++) {
+    for (int j = 1; j <= GRID_SIZE; j++) {
+      for (int i = 1; i <= GRID_SIZE; i++) {
+        pressure[idx(i, j)] = (
+          divergence[idx(i, j)] +
+          pressure[idx(i-1, j)] + pressure[idx(i+1, j)] +
+          pressure[idx(i, j-1)] + pressure[idx(i, j+1)]
+        ) / 4.0f;
+      }
+    }
+    apply_boundary_conditions(0, pressure);
+  }
+
+  // 3. subtract pressure gradient from velocity field
+  for (int j = 1; j <= GRID_SIZE; j++) {
+    for (int i = 1; i <= GRID_SIZE; i++) {
+      velx[idx(i, j)] -= 0.5f * GRID_SIZE * (pressure[idx(i+1, j)] - pressure[idx(i-1, j)]);
+      vely[idx(i, j)] -= 0.5f * GRID_SIZE * (pressure[idx(i, j+1)] - pressure[idx(i, j-1)]);
+    }
+  }
+  apply_boundary_conditions(1, velx);
+  apply_boundary_conditions(2, vely);
 }
