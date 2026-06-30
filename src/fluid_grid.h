@@ -26,4 +26,6 @@ struct FluidGrid {
   void step();
   void apply_boundary_conditions(int b, std::vector<float>& field);
   void diffuse(int b, std::vector<float>& field, std::vector<float>& field_previous, float rate);
+  void advect(int b, std::vector<float>& d, std::vector<float>& d0,
+            std::vector<float>& velx, std::vector<float>& vely, float dt);
 };

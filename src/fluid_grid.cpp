@@ -40,3 +40,36 @@ void FluidGrid::diffuse(int b, std::vector<float>& field, std::vector<float>& fi
     apply_boundary_conditions(b, field);
   }
 }
+
+void FluidGrid::advect(int b, std::vector<float>& d, std::vector<float>& d0,
+            std::vector<float>& velx, std::vector<float>& vely, float dt) {
+    float dt0 = dt * GRID_SIZE;
+
+    for (int j = 1; j <= GRID_SIZE; j++) {
+        for (int i = 1; i <= GRID_SIZE; i++) {
+            float x = i - dt0 * velx[idx(i, j)];
+            float y = j - dt0 * vely[idx(i, j)];
+
+            if (x < 0.5f) x = 0.5f;
+            if (x > GRID_SIZE + 0.5f) x = GRID_SIZE + 0.5f;
+            if (y < 0.5f) y = 0.5f;
+            if (y > GRID_SIZE + 0.5f) y = GRID_SIZE + 0.5f;
+
+            int i0 = (int)x;
+            int i1 = i0 + 1;
+            int j0 = (int)y;
+            int j1 = j0 + 1;
+
+            float s1 = x - i0;
+            float s0 = 1.0f - s1;
+            float t1 = y - j0;
+            float t0 = 1.0f - t1;
+
+            d[idx(i, j)] =
+                s0 * (t0 * d0[idx(i0, j0)] + t1 * d0[idx(i0, j1)]) +
+                s1 * (t0 * d0[idx(i1, j0)] + t1 * d0[idx(i1, j1)]);
+        }
+    }
+
+    apply_boundary_conditions(b, d);
+}
