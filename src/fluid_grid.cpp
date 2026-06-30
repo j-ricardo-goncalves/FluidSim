@@ -24,3 +24,19 @@ void FluidGrid::apply_boundary_conditions(int b, std::vector<float>& field) {
   field[idx(GRID_SIZE + 1, GRID_SIZE + 1)] = 0.5 * (field[idx(GRID_SIZE, GRID_SIZE + 1)] + field[idx(GRID_SIZE + 1, GRID_SIZE)]);
 
 }
+
+void FluidGrid::diffuse(int b, std::vector<float>& field, std::vector<float>& field_previous, float rate) {
+  float a = dt * rate * GRID_SIZE * GRID_SIZE;
+
+  for (int iter = 0; iter < 20; iter++) {
+    for (int x = 1; x <= GRID_SIZE; x++) {
+      for (int y = 1; y <= GRID_SIZE; y++) {
+        field[idx(x, y)] = (field_previous[idx(x, y)] +
+                             a * (field[idx(x-1, y)] + field[idx(x+1, y)] +
+                                  field[idx(x, y-1)] + field[idx(x, y+1)]))
+                            / (1 + 4 * a);
+      }
+    }
+    apply_boundary_conditions(b, field);
+  }
+}
