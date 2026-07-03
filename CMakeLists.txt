@@ -16,6 +16,7 @@ find_package(SDL2 REQUIRED)
 add_executable(fluid_sim
     src/main.cpp
     src/fluid_grid.cpp
+    src/renderer.cpp
 )
 
 target_include_directories(fluid_sim PRIVATE
