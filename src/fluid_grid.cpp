@@ -68,6 +68,43 @@ void FluidGrid::apply_boundary_conditions(Boundary b,
     field[idx(GRID_SIZE + 1, GRID_SIZE + 1)] =
         0.5f * (field[idx(GRID_SIZE, GRID_SIZE + 1)] +
                 field[idx(GRID_SIZE + 1, GRID_SIZE)]);
+
+    // Interior obstacles: same idea as the outer wall, applied per-cell.
+    // For each wall cell, average the reflection from every non-wall
+    // neighbor (negated for the velocity component facing that neighbor,
+    // mirrored as-is for scalar fields). A wall cell with no fluid
+    // neighbor (buried inside a larger obstacle) just stays 0.
+    for (int y = 1; y <= GRID_SIZE; y++) {
+        for (int x = 1; x <= GRID_SIZE; x++) {
+            if (!obstacle[idx(x, y)]) continue;
+
+            float sum = 0.0f;
+            int count = 0;
+
+            if (!obstacle[idx(x - 1, y)]) {
+                sum += (b == Boundary::VelX) ? -field[idx(x - 1, y)]
+                                              : field[idx(x - 1, y)];
+                count++;
+            }
+            if (!obstacle[idx(x + 1, y)]) {
+                sum += (b == Boundary::VelX) ? -field[idx(x + 1, y)]
+                                              : field[idx(x + 1, y)];
+                count++;
+            }
+            if (!obstacle[idx(x, y - 1)]) {
+                sum += (b == Boundary::VelY) ? -field[idx(x, y - 1)]
+                                              : field[idx(x, y - 1)];
+                count++;
+            }
+            if (!obstacle[idx(x, y + 1)]) {
+                sum += (b == Boundary::VelY) ? -field[idx(x, y + 1)]
+                                              : field[idx(x, y + 1)];
+                count++;
+            }
+
+            field[idx(x, y)] = (count > 0) ? sum / count : 0.0f;
+        }
+    }
 }
 
 void FluidGrid::diffuse(Boundary b, std::vector<float>& field,
@@ -95,6 +132,12 @@ void FluidGrid::advect(Boundary b, std::vector<float>& d,
 
     for (int j = 1; j <= GRID_SIZE; j++) {
         for (int i = 1; i <= GRID_SIZE; i++) {
+            // Walls don't hold density/velocity — nothing to advect into them.
+            if (obstacle[idx(i, j)]) {
+                d[idx(i, j)] = 0.0f;
+                continue;
+            }
+
             float x = i - dt0 * velx[idx(i, j)];
             float y = j - dt0 * vely[idx(i, j)];
 
@@ -102,6 +145,17 @@ void FluidGrid::advect(Boundary b, std::vector<float>& d,
             if (x > GRID_SIZE + 0.5f) x = GRID_SIZE + 0.5f;
             if (y < 0.5f) y = 0.5f;
             if (y > GRID_SIZE + 0.5f) y = GRID_SIZE + 0.5f;
+
+            // A backtraced sample landing inside a wall is invalid — fluid
+            // can't have come from inside a solid. Simplest fix: don't move
+            // the sample at all, so the cell just keeps its current value
+            // this step instead of pulling through the wall.
+            int sample_i = (int)(x + 0.5f);
+            int sample_j = (int)(y + 0.5f);
+            if (obstacle[idx(sample_i, sample_j)]) {
+                x = (float)i;
+                y = (float)j;
+            }
 
             int i0 = (int)x;
             int i1 = i0 + 1;

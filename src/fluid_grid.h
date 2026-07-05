@@ -58,7 +58,7 @@ struct FluidGrid {
     void clear_density(int x, int y);
 
     // Mark/unmark a grid cell (1 <= x,y <= GRID_SIZE) as a solid obstacle.
-    // Out-of-range coordinates
+    // Out-of-range coordinates are ignored
     void set_obstacle(int x, int y);
     void clear_obstacle(int x, int y);
 
