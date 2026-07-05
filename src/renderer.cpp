@@ -66,19 +66,30 @@ FluidRenderer::~FluidRenderer() {
 void FluidRenderer::draw(const FluidGrid& grid) {
     for (int x = 1; x <= GRID_SIZE; x++) {
         for (int y = 1; y <= GRID_SIZE; y++) {
-            float d = grid.density[idx(x, y)];
+            Uint32 color;
 
-            float t = std::min(d / 80.0f, 1.0f);
-            t = std::pow(t, 0.35f);
+            if (grid.obstacle[idx(x, y)]) {
+                // Solid obstacle cell (e.g. the wind-tunnel wing) — flat
+                // light gray so it reads clearly against the dark
+                // background and the colored density field.
+                color = pack_rgba32(200, 200, 50, 255);
+            } else {
+                float d = grid.density[idx(x, y)];
 
-            Uint8 r = (Uint8)(std::min(t * 3.0f, 1.0f) * 255);
-            Uint8 g = (Uint8)(std::min(t * 3.0f - 1.0f, 1.0f) * 255 *
-                              (t > 0.33f ? 1.0f : 0.0f));
-            Uint8 b = (Uint8)(std::min(t * 3.0f - 2.0f, 1.0f) * 255 *
-                              (t > 0.66f ? 1.0f : 0.0f));
+                float t = std::min(d / 80.0f, 1.0f);
+                t = std::pow(t, 0.35f);
 
-            buffer[(y - 1) * GRID_SIZE + (x - 1)] = pack_rgba32(r, g, b, 255);
+                Uint8 r = (Uint8)(std::min(t * 3.0f, 1.0f) * 255);
+                Uint8 g = (Uint8)(std::min(t * 3.0f - 1.0f, 1.0f) * 255 *
+                                  (t > 0.33f ? 1.0f : 0.0f));
+                Uint8 b = (Uint8)(std::min(t * 3.0f - 2.0f, 1.0f) * 255 *
+                                  (t > 0.66f ? 1.0f : 0.0f));
+
+                color = pack_rgba32(r, g, b, 255);
             }
+
+            buffer[(y - 1) * GRID_SIZE + (x - 1)] = color;
+        }
     }
 
     SDL_UpdateTexture(texture, nullptr, buffer.data(),

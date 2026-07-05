@@ -1,6 +1,56 @@
 #include <SDL2/SDL_events.h>
+#include <cmath>
 #include "fluid_grid.h"
 #include "renderer.h"
+
+const bool DEMO_MODE = true;
+
+// Builds a simple symmetric airfoil (NACA 00xx thickness profile) as a
+// wall of obstacle cells, chord-aligned with the x axis, centered
+// vertically in the tunnel.
+void build_wing(FluidGrid& grid) {
+    const int chord = 80;                  // length along flow direction
+    const int x_start = GRID_SIZE / 4;     // leading edge position
+    const int y_center = GRID_SIZE / 2;
+    const float thickness = 0.4f;          // max thickness as fraction of chord
+
+    for (int i = 0; i <= chord; i++) {
+        float xc = (float)i / chord;       // 0 (leading edge) .. 1 (trailing edge)
+
+        // Standard NACA 4-digit thickness distribution formula.
+        float yt = 5.0f * thickness *
+                   (0.2969f * std::sqrt(xc) - 0.1260f * xc -
+                    0.3516f * xc * xc + 0.2843f * xc * xc * xc -
+                    0.1015f * xc * xc * xc * xc);
+
+        int half_thickness = (int)(yt * chord);
+        int gx = x_start + i;
+        for (int dy = -half_thickness; dy <= half_thickness; dy++) {
+            grid.set_obstacle(gx, y_center + dy);
+        }
+    }
+}
+
+// Every frame in demo mode: push a constant wind across the inlet and seed
+// a few thin horizontal dye streaklines so the flow around the wing is
+// visible. These have to be re-applied every frame because step() clears
+// the *_previous source buffers once they've been consumed.
+void apply_wind_tunnel(FluidGrid& grid) {
+    const float wind_speed = 10.0f;
+    const int inlet_width = 1;
+    const float dye_amount = 1.0f;
+    const int y_center = GRID_SIZE / 2;
+ 
+    for (int y = 1; y <= GRID_SIZE; y++) {
+        for (int x = 1; x <= inlet_width; x++) {
+            grid.add_velocity(x, y, wind_speed, 0.0f);
+        }
+    }
+
+    grid.add_density(1, y_center, dye_amount);
+    grid.add_density(2, y_center, dye_amount);
+
+}
 
 int main(int argc, char* argv[]) {
     (void)argc;
@@ -18,7 +68,9 @@ int main(int argc, char* argv[]) {
     // click point never builds up past a dim blue before it's smoothed away.
     // iterations=4 keeps the solver inside the ~16ms frame budget; bump it
     // up if you want a more accurate/smoother sim at the cost of framerate.
-    FluidGrid grid(0.1f, 0.0f, 0.000001f, /*iterations=*/10);
+    FluidGrid grid(0.1f, 0.0f, 0.000001f, /*iterations=*/4);
+
+    if (DEMO_MODE) build_wing(grid);
 
     int mouse_x = 0, mouse_y = 0, prev_mouse_x = 0, prev_mouse_y = 0;
     bool mouse_down = false;
@@ -51,7 +103,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (mouse_down) {
+        if (DEMO_MODE) {
+            apply_wind_tunnel(grid);
+        } else if (mouse_down) {
             int gx = mouse_x + 1;
             int gy = mouse_y + 1;
             // Space held = erase density at the cursor; otherwise add it.
