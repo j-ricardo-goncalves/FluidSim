@@ -18,11 +18,11 @@ int main(int argc, char* argv[]) {
     // click point never builds up past a dim blue before it's smoothed away.
     // iterations=4 keeps the solver inside the ~16ms frame budget; bump it
     // up if you want a more accurate/smoother sim at the cost of framerate.
-    FluidGrid grid(0.1f, 0.0f, 0.000001f, /*iterations=*/4);
+    FluidGrid grid(0.1f, 0.0f, 0.000001f, /*iterations=*/10);
 
     int mouse_x = 0, mouse_y = 0, prev_mouse_x = 0, prev_mouse_y = 0;
-    bool mouse_left_down = false;
-    bool mouse_right_down = false;
+    bool mouse_down = false;
+    bool space_down = false;
 
     float density_amount = 500.0f;
     float velocity_amount = 10.0f;
@@ -35,34 +35,15 @@ int main(int argc, char* argv[]) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) running = false;
             if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) running = false;
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_EQUALS) {
-                density_amount *= 1.5f;
-                printf("density_amount: %f\n", density_amount);
-            }
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_MINUS) {
-                density_amount /= 1.5f;
-                printf("density_amount: %f\n", density_amount);
-            }
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RIGHTBRACKET) {
-                velocity_amount *= 1.5f;
-                printf("velocity_amount: %f\n", velocity_amount);
-            }
-            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_LEFTBRACKET) {
-                velocity_amount /= 1.5f;
-                printf("velocity_amount: %f\n", velocity_amount);
-            }
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
-                if (e.button.button == SDL_BUTTON_LEFT) {
-                    mouse_left_down = true;
-                } else if (e.button.button == SDL_BUTTON_RIGHT) {
-                    mouse_right_down = true;
-                }
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE) space_down = true;
+            if (e.type == SDL_KEYUP && e.key.keysym.sym == SDLK_SPACE) space_down = false;
+            if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
+                mouse_down = true;
                 prev_mouse_x = e.button.x / renderer.scale;
                 prev_mouse_y = e.button.y / renderer.scale;
             }
-            if (e.type == SDL_MOUSEBUTTONUP) {
-                if (e.button.button == SDL_BUTTON_LEFT) mouse_left_down = false;
-                if (e.button.button == SDL_BUTTON_RIGHT) mouse_right_down = false;
+            if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) {
+                mouse_down = false;
             }
             if (e.type == SDL_MOUSEMOTION) {
                 mouse_x = e.motion.x / renderer.scale;
@@ -70,23 +51,15 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (mouse_left_down) {
+        if (mouse_down) {
             int gx = mouse_x + 1;
             int gy = mouse_y + 1;
-            grid.add_density(gx, gy, density_amount);
+            // Space held = erase density at the cursor; otherwise add it.
+            float amount = space_down ? -density_amount : density_amount;
+            grid.add_density(gx, gy, amount);
             grid.add_velocity(gx, gy,
                                (float)(mouse_x - prev_mouse_x) * velocity_amount,
                                (float)(mouse_y - prev_mouse_y) * velocity_amount);
-        }
-        if (mouse_right_down) {
-            int gx = mouse_x + 1;
-            int gy = mouse_y + 1;
-            grid.add_density(gx, gy, -density_amount);
-            grid.add_velocity(gx, gy,
-                               (float)(mouse_x - prev_mouse_x) * velocity_amount,
-                               (float)(mouse_y - prev_mouse_y) * velocity_amount);
-        }
-        if (mouse_left_down || mouse_right_down) {
             prev_mouse_x = mouse_x;
             prev_mouse_y = mouse_y;
         }
