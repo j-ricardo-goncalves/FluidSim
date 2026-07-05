@@ -15,6 +15,7 @@ FluidGrid::FluidGrid(float dt, float viscosity, float diffusion, int iterations)
     vely_previous.assign(GRID, 0.0f);
     pressure.assign(GRID, 0.0f);
     divergence.assign(GRID, 0.0f);
+    obstacle.assign(GRID, 0);
 }
 
 void FluidGrid::add_density(int x, int y, float amount) {
@@ -32,6 +33,16 @@ void FluidGrid::clear_density(int x, int y) {
     if (x < 1 || x > GRID_SIZE || y < 1 || y > GRID_SIZE) return;
     density[idx(x, y)] = 0.0f;
     density_previous[idx(x, y)] = 0.0f;
+}
+
+void FluidGrid::set_obstacle(int x, int y) {
+    if (x < 1 || x > GRID_SIZE || y < 1 || y > GRID_SIZE) return;
+    obstacle[idx(x, y)] = 1;
+}
+
+void FluidGrid::clear_obstacle(int x, int y) {
+    if (x < 1 || x > GRID_SIZE || y < 1 || y > GRID_SIZE) return;
+    obstacle[idx(x, y)] = 0;
 }
 
 void FluidGrid::apply_boundary_conditions(Boundary b,

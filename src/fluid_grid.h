@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 const int GRID_SIZE = 256;
@@ -24,6 +25,7 @@ struct FluidGrid {
     std::vector<float> vely_previous;
     std::vector<float> pressure;
     std::vector<float> divergence;
+    std::vector<uint8_t> obstacle;
 
     float viscosity;
     float diffusion;
@@ -54,6 +56,11 @@ struct FluidGrid {
     // of relying on a negative source term, so it can't leave lingering
     // negative-density artifacts once diffusion/advection spread it around.
     void clear_density(int x, int y);
+
+    // Mark/unmark a grid cell (1 <= x,y <= GRID_SIZE) as a solid obstacle.
+    // Out-of-range coordinates
+    void set_obstacle(int x, int y);
+    void clear_obstacle(int x, int y);
 
     void add_source(std::vector<float>& field, std::vector<float>& source);
     void apply_boundary_conditions(Boundary b, std::vector<float>& field);
